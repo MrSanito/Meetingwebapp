@@ -86,7 +86,7 @@ export default function CreateMeetingPage() {
     console.log("Creating meeting with data:", data);
 
     try {
-        const response = await axios.post("http://localhost:3001/api/v1/meeting/create", data);
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meeting/create`, data);
 
         if (response.data.success) {
             toast.success(`Meeting "${meetingName}" Created!`);

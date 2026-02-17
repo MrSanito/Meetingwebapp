@@ -40,7 +40,7 @@ export default function MeetingPage() {
 
         const fetchMeeting = async () => {
             try {
-                const res = await axios.get(`http://localhost:3001/api/v1/meeting/${meetingId}`);
+                const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meeting/${meetingId}`);
                 if (res.data.success) {
                     setMeeting(res.data.meeting);
                 } else {
@@ -65,7 +65,7 @@ export default function MeetingPage() {
 
         setBooking(true);
         try {
-            const res = await axios.post(`http://localhost:3001/api/v1/meeting/${meetingId}/book`, {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meeting/${meetingId}/book`, {
                 slotId: selectedSlotId,
                 meetingId,
                 bookerName: name,

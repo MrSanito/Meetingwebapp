@@ -47,7 +47,7 @@ export const useNameHook = () => {
     localStorage.setItem("email", inputEmail);
 
     try {
-        const res = await axios.post("http://localhost:3001/api/v1/user/create", {
+        const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/user/create`, {
             name: inputName,
             username: generatedUsername,
             email : inputEmail
