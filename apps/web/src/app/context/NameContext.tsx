@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, ReactNode } from "react";
-import { useNameHook } from "../hooks/useNameHooke";
+import { createContext, ReactNode, useContext } from "react";
+import { useNameHook } from "../hooks/useNameHook";
 
 interface NameContextType {
     name: string;
@@ -19,6 +19,14 @@ export const NameProvider = ({ children }: { children: ReactNode }) => {
             {children}
         </NameContext.Provider>
     );
+};
+
+export const useName = () => {
+    const context = useContext(NameContext);
+    if (!context) {
+        throw new Error("useName must be used within a NameProvider");
+    }
+    return context;
 };
 
 export default NameContext;

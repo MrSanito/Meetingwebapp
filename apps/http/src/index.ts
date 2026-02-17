@@ -1,8 +1,8 @@
 
 import express from 'express';
 import cors from 'cors';
-import { prisma } from './client.js';
-import router from './routes/index.js';
+import { prisma } from './client';
+import router from './routes/index';
 
 const app = express();
 const port = process.env.PORT || 3001;
