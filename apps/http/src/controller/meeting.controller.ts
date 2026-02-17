@@ -128,6 +128,7 @@ import { sendEmail } from "../mailer";
 export const bookSlot = async (req: Request, res: Response): Promise<void> => {
     try {
         const { slotId, bookerName, bookerUsername, bookerEmail } = req.body;
+        console.log(`[BOOKING START] Processing booking for slot: ${slotId}, user: ${bookerUsername}, email: ${bookerEmail}`);
 
         if (!slotId || !bookerUsername || !bookerEmail) {
             res.status(400).json({ success: false, message: "Missing required fields (including email)" });
@@ -179,18 +180,24 @@ export const bookSlot = async (req: Request, res: Response): Promise<void> => {
         const meetingDate = slot.meeting.date.toISOString().split('T')[0];
         const timeRange = `${slot.startTime.toLocaleTimeString()} - ${slot.endTime.toLocaleTimeString()}`;
         
-        await sendEmail(
-            bookerEmail, 
-            "Booking Confirmed: " + slot.meeting.title,
-            `You have successfully booked a slot for "${slot.meeting.title}" on ${meetingDate} at ${timeRange}.`
-        );
-
-        if (slot.meeting.createdBy.email) {
+        // Send emails asynchronously - do not block response if email fails
+        try {
             await sendEmail(
-                slot.meeting.createdBy.email,
-                "New Booking: " + slot.meeting.title,
-                `${bookerName} (${bookerEmail}) has booked a slot on ${meetingDate} at ${timeRange}.`
+                bookerEmail, 
+                "Booking Confirmed: " + slot.meeting.title,
+                `You have successfully booked a slot for "${slot.meeting.title}" on ${meetingDate} at ${timeRange}.`
             );
+
+            if (slot.meeting.createdBy.email) {
+                await sendEmail(
+                    slot.meeting.createdBy.email,
+                    "New Booking: " + slot.meeting.title,
+                    `${bookerName} (${bookerEmail}) has booked a slot on ${meetingDate} at ${timeRange}.`
+                );
+            }
+        } catch (emailError) {
+            console.error("[BOOKING WARNING] Booking successful but email failed:", emailError);
+            // Swallowing error to ensure client gets success response
         }
 
         res.status(200).json({ success: true, message: "Slot booked successfully" });
