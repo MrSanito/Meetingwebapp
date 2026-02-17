@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useName } from "../context/NameContext";
 import Link from "next/link";
+import { toast } from 'react-toastify';
 
 export default function CreateMeetingPage() {
   const { name } = useName();
@@ -14,9 +15,12 @@ export default function CreateMeetingPage() {
 
   // Generate random ID on mount
   useEffect(() => {
+    console.log("🚀 CreateMeetingPage Mounted! ID Generation started.");
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     const gen = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    setMeetingId(`${gen()}-${gen()}-${gen()}`);
+    const newId = `${gen()}-${gen()}-${gen()}`;
+    setMeetingId(newId);
+    console.log("✅ Generated ID:", newId);
   }, []);
 
   const timeSlots = [
@@ -26,9 +30,20 @@ export default function CreateMeetingPage() {
   ];
 
   const toggleSlot = (slot: string) => {
-    setSelectedSlots(prev => 
-      prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]
-    );
+    setSelectedSlots(prev => {
+      const isSelected = prev.includes(slot);
+      const next = isSelected ? prev.filter(s => s !== slot) : [...prev, slot];
+      
+      if (!isSelected) {
+        toast.info(`Selected: ${slot}`, { autoClose: 1000, position: "bottom-right" });
+      } else {
+        toast.warn(`Removed: ${slot}`, { autoClose: 1000, position: "bottom-right" });
+      }
+
+      console.log("👆 Slot Toggled! New selection count:", next.length);
+      console.log("📋 Current Selected Slots:", next);
+      return next;
+    });
   };
 
   const handleCreate = () => {
@@ -129,9 +144,11 @@ export default function CreateMeetingPage() {
           >
             Create Meeting & Generate Link
           </button>
-          <Link href="/" className="text-zinc-500 hover:text-white text-center text-sm underline underline-offset-4">
-            Cancel and Return Home
-          </Link>
+          <div className="text-center mt-4">
+            <Link href="/" className="text-zinc-500 hover:text-white text-center text-sm underline underline-offset-4">
+                Cancel and Return Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

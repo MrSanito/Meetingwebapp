@@ -2,10 +2,11 @@ import { Router
 
 
  } from "express";
-import { createMeetingController } from "../controller/meeting.controller";
+import { createMeetingController, getMeeting } from "../controller/meeting.controller";
 
  const router = Router();
 
  router.get("/create", createMeetingController)
+ router.get("/get", getMeeting)
 
  export default router
