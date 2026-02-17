@@ -10,3 +10,10 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+model Meeting {
+  id    String @id @default(uuid())
+  name  String
+  slots slot[]
+}
