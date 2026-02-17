@@ -3,44 +3,168 @@
 import { useName } from "../../context/NameContext";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import axios from "axios";
+import NamePrompt from "../../components/NamePrompt";
 
-export default function BookingPage() {
-  const { name } = useName();
-  const params = useParams();
-  const meetingId = params.id;
+interface Slot {
+    id: string;
+    startTime: string;
+    endTime: string;
+    bookedById: string | null;
+}
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4">
-      <div className="bg-zinc-900 border border-zinc-800 shadow-xl rounded-2xl p-8 w-full max-w-md text-white">
-        <h1 className="text-2xl font-semibold mb-1 text-center text-blue-500">Meeting Booking</h1>
-        <p className="text-zinc-500 text-center text-sm mb-6 font-mono">ID: {meetingId}</p>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-400">Booked by: <span className="text-white font-medium">{name}</span></p>
-          
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="text-xs text-zinc-500 block mb-1">Selected Date</label>
-              <input type="date" className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-blue-500" />
+interface Meeting {
+    id: string;
+    title: string;
+    description: string;
+    date: string;
+    slots: Slot[];
+    createdBy: { name: string; email?: string };
+}
+
+export default function MeetingPage() {
+    const params = useParams();
+    const meetingId = Array.isArray(params.id) ? params.id[0] : params.id;
+    
+    const { name, username, email } = useName(); // This name is the Booker's name
+    
+    const [meeting, setMeeting] = useState<Meeting | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+    const [booking, setBooking] = useState(false);
+
+    useEffect(() => {
+        if (!meetingId) return;
+
+        const fetchMeeting = async () => {
+            try {
+                const res = await axios.get(`http://localhost:3001/api/v1/meeting/${meetingId}`);
+                if (res.data.success) {
+                    setMeeting(res.data.meeting);
+                } else {
+                    toast.error("Failed to load meeting details");
+                }
+            } catch (err) {
+                console.error(err);
+                toast.error("Error loading meeting.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMeeting();
+    }, [meetingId]);
+
+    const handleBook = async () => {
+        if (!selectedSlotId || !name) {
+            toast.error("Please select a slot and ensure you have a name set.");
+            return;
+        }
+
+        setBooking(true);
+        try {
+            const res = await axios.post(`http://localhost:3001/api/v1/meeting/${meetingId}/book`, {
+                slotId: selectedSlotId,
+                meetingId,
+                bookerName: name,
+                bookerUsername: username || name,
+                bookerEmail: email
+            });
+            
+            if (res.data.success) {
+                toast.success("Booking Confirmed! Check your email.");
+                // Refresh data to show booked slot
+                window.location.reload();
+            } else {
+                toast.error("Booking Failed: " + res.data.message);
+            }
+        } catch (err: any) {
+            console.error(err);
+            if (axios.isAxiosError(err) && err.response) {
+                toast.error("Booking Failed: " + (err.response.data.message || err.message));
+            } else {
+                toast.error("Network error");
+            }
+        } finally {
+            setBooking(false);
+        }
+    };
+
+    const formatTime = (isoString: string) => {
+        return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const formatDate = (isoString: string) => {
+        return new Date(isoString).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    };
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading meeting details...</div>;
+    
+    if (!name || !email) return <NamePrompt />;
+
+    if (!meeting) return <div className="min-h-screen flex items-center justify-center bg-black text-white">Meeting not found or invalid ID.</div>;
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-black px-4">
+        <div className="bg-zinc-900 border border-zinc-800 shadow-xl rounded-2xl p-8 w-full max-w-md text-white">
+            <h1 className="text-2xl font-semibold mb-1 text-center text-blue-500">{meeting.title}</h1>
+            <p className="text-zinc-500 text-center text-sm mb-6 font-mono">ID: {meetingId}</p>
+            
+            <div className="space-y-4">
+            <div className="bg-black/50 p-4 rounded-lg border border-zinc-800">
+                <p className="text-sm text-zinc-400">Host: <span className="text-white">{meeting.createdBy?.name}</span></p>
+                <p className="text-sm text-zinc-400 mt-1">Date: <span className="text-white">{formatDate(meeting.date)}</span></p>
+                {meeting.description && <p className="text-xs text-zinc-500 mt-2 italic">{meeting.description}</p>}
             </div>
-            <div>
-              <label className="text-xs text-zinc-500 block mb-1">Selected Time</label>
-              <input type="time" className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2 outline-none focus:ring-1 focus:ring-blue-500" />
-            </div>
-          </div>
 
-          <button 
-            onClick={() => alert("Confirmed for ID: " + meetingId)}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium mt-2"
-          >
-            Confirm Appointment
-          </button>
-          
-          <div className="text-center mt-4">
-            <Link href="/" className="text-zinc-500 hover:text-white text-sm underline">Cancel and Go Home</Link>
-          </div>
+            <p className="text-sm text-zinc-400">Book as: <span className="text-white font-medium">{name}</span> {email && <span className="text-zinc-500 text-xs">({email})</span>}</p>
+            
+            <div className="space-y-2">
+                <label className="text-xs text-zinc-500 block">Select a Time Slot</label>
+                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                    {meeting.slots.map(slot => {
+                        const isBooked = !!slot.bookedById;
+                        const isSelected = selectedSlotId === slot.id;
+                        return (
+                            <button
+                                key={slot.id}
+                                disabled={isBooked}
+                                onClick={() => setSelectedSlotId(slot.id)}
+                                className={`w-full py-2 px-3 rounded-lg text-sm border transition-all ${
+                                    isBooked 
+                                        ? "bg-red-900/20 border-red-900/50 text-red-500 cursor-not-allowed"
+                                        : isSelected
+                                            ? "bg-blue-600 border-blue-500 text-white"
+                                            : "bg-black border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800"
+                                }`}
+                            >
+                                {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                {isBooked && " (Booked)"}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <button 
+                onClick={handleBook}
+                disabled={booking || !selectedSlotId}
+                className={`w-full py-2 rounded-lg transition font-medium mt-2 ${
+                    booking || !selectedSlotId 
+                    ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+            >
+                {booking ? "Confirming..." : "Confirm Appointment"}
+            </button>
+            
+            <div className="text-center mt-4">
+                <Link href="/" className="text-zinc-500 hover:text-white text-sm underline">Cancel and Go Home</Link>
+            </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+        </div>
+    );
 }

@@ -8,6 +8,7 @@ export default function MeetingActions() {
   const [view, setView] = useState<'selection' | 'join-form'>('selection');
   const [meetingId, setMeetingId] = useState('');
 
+  
   const handleJoin = () => {
     if (!meetingId.trim()) {
       alert("Enter ID first");

@@ -1,27 +1,39 @@
-'use client';
+"use client"
 
 import { useState, useEffect } from "react";
 import { useName } from "../context/NameContext";
 import Link from "next/link";
 import { toast } from 'react-toastify';
+import axios from "axios";
+import NamePrompt from "../components/NamePrompt";
+import MeetingSuccess from "../components/MeetingSuccess";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import "../calendar.css";
+
+type ValuePiece = Date | null;
+type Value = ValuePiece | [ValuePiece, ValuePiece];
 
 export default function CreateMeetingPage() {
-  const { name } = useName();
+  const { name, username } = useName();
   const [meetingName, setMeetingName] = useState("");
   const [meetingDetails, setMeetingDetails] = useState("");
   const [meetingId, setMeetingId] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Value>(new Date());
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Generate random ID on mount
   useEffect(() => {
-    console.log("🚀 CreateMeetingPage Mounted! ID Generation started.");
+    if (!name) return; 
+    if (meetingId) return; // Already generated
+
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     const gen = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const newId = `${gen()}-${gen()}-${gen()}`;
     setMeetingId(newId);
-    console.log("✅ Generated ID:", newId);
-  }, []);
+  }, [name, meetingId]);
 
   const timeSlots = [
     "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
@@ -39,32 +51,67 @@ export default function CreateMeetingPage() {
       } else {
         toast.warn(`Removed: ${slot}`, { autoClose: 1000, position: "bottom-right" });
       }
-
-      console.log("👆 Slot Toggled! New selection count:", next.length);
-      console.log("📋 Current Selected Slots:", next);
       return next;
     });
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!meetingName || !selectedDate || selectedSlots.length === 0) {
-      alert("Please fill name, date and at least one time slot");
+      toast.error("Please fill name, date and at least one time slot");
       return;
     }
+
+    const dateObj = selectedDate instanceof Date ? selectedDate : Array.isArray(selectedDate) ? selectedDate[0] : null;
+
+    if (!dateObj) {
+        toast.error("Invalid date selected");
+        return;
+    }
+    
+    // Format date to YYYY-MM-DD local time to avoid timezone shifts
+    const offset = dateObj.getTimezoneOffset();
+    const dateLocal = new Date(dateObj.getTime() - (offset * 60 * 1000));
+    const dateStr = dateLocal.toISOString().split('T')[0];
     
     const data = {
       meetingName,
       meetingDetails,
       meetingId,
-      selectedDate,
+      selectedDate: dateStr,
       selectedSlots,
-      creator: name
+      creatorName: name,
+      creatorUsername: localStorage.getItem("username") || name 
     };
     
     console.log("Creating meeting with data:", data);
-    alert(`Meeting "${meetingName}" Created!\nID: ${meetingId}\nSlots: ${selectedSlots.length} selected`);
-    // API call would go here
+
+    try {
+        const response = await axios.post("http://localhost:3001/api/v1/meeting/create", data);
+
+        if (response.data.success) {
+            toast.success(`Meeting "${meetingName}" Created!`);
+            setIsSuccess(true);
+        } else {
+            console.error("Creation failed:", response.data);
+            toast.error("Failed to create meeting: " + (response.data.message || "Unknown error"));
+        }
+    } catch (error) {
+        console.error("Network error:", error);
+        if (axios.isAxiosError(error) && error.response) {
+             toast.error("Failed to create meeting: " + (error.response.data.message || error.message));
+        } else {
+             toast.error("Failed to connect to server");
+        }
+    }
   };
+
+  if (!name) {
+    return <NamePrompt />;
+  }
+
+  if (isSuccess) {
+    return <MeetingSuccess meetingId={meetingId} onReset={() => window.location.reload()} />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10">
@@ -99,17 +146,24 @@ export default function CreateMeetingPage() {
 
             <div className="p-4 bg-black/50 border border-zinc-800 rounded-xl">
               <label className="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Generated Meeting ID</label>
-              <code className="text-green-400 font-mono text-lg block">{meetingId}</code>
+              <code className="text-green-400 font-mono text-lg block" suppressHydrationWarning>{meetingId}</code>
             </div>
 
             <div>
                 <label className="text-xs text-zinc-500 uppercase font-bold tracking-wider block mb-2">Select Date</label>
-                <input 
-                    type="date" 
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-black border border-zinc-800 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-green-500 transition"
-                />
+                <div className="flex justify-center bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
+                    <Calendar 
+                        onChange={setSelectedDate} 
+                        value={selectedDate}
+                        className="react-calendar" 
+                        tileClassName={({ date, view }) => {
+                            if (view === 'month') {
+                                return 'rounded-lg font-medium text-sm hover:bg-zinc-800 transition-colors';
+                            }
+                            return null;
+                        }}
+                    />
+                </div>
             </div>
           </div>
 

@@ -1,12 +1,10 @@
-import { Router
+import { Router } from "express";
+import { createMeetingController, getMeeting, bookSlot } from "../controller/meeting.controller";
 
+const router = Router();
 
- } from "express";
-import { createMeetingController, getMeeting } from "../controller/meeting.controller";
+router.post("/create", createMeetingController);
+router.get("/:id", getMeeting);
+router.post("/:id/book", bookSlot);
 
- const router = Router();
-
- router.get("/create", createMeetingController)
- router.get("/get", getMeeting)
-
- export default router
+export default router;
