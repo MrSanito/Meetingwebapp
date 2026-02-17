@@ -149,7 +149,7 @@ export default function MeetingPage() {
                         return (
                             <button
                                 key={slot.id}
-                                disabled={isBooked}
+                                disabled={isBooked || meeting.createdBy?.email === email}
                                 onClick={() => setSelectedSlotId(slot.id)}
                                 className={`w-full py-2 px-3 rounded-lg text-sm border transition-all ${
                                     isBooked 
@@ -171,8 +171,8 @@ export default function MeetingPage() {
                 onClick={handleBook}
                 disabled={booking || !selectedSlotId || isAlreadyBooked || meeting.createdBy?.email === email}
                 className={`w-full py-2 rounded-lg transition font-medium mt-2 ${
-                    booking || !selectedSlotId || isAlreadyBooked 
-                    ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
+                    booking || !selectedSlotId || isAlreadyBooked || meeting.createdBy?.email === email
+                    ? "bg-zinc-700 text-zinc-400 cursor-not-allowed"  
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
             >
