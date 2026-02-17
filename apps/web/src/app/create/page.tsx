@@ -24,10 +24,10 @@ export default function CreateMeetingPage() {
   
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Generate random ID on mount
+
   useEffect(() => {
     if (!name) return; 
-    if (meetingId) return; // Already generated
+    if (meetingId) return;
 
     const chars = 'abcdefghijklmnopqrstuvwxyz';
     const gen = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -68,7 +68,7 @@ export default function CreateMeetingPage() {
         return;
     }
     
-    // Format date to YYYY-MM-DD local time to avoid timezone shifts
+
     const offset = dateObj.getTimezoneOffset();
     const dateLocal = new Date(dateObj.getTime() - (offset * 60 * 1000));
     const dateStr = dateLocal.toISOString().split('T')[0];
@@ -120,8 +120,7 @@ export default function CreateMeetingPage() {
         <p className="text-zinc-500 mb-8 border-b border-zinc-800 pb-4">Configure your meeting workspace</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Left Column: Basic Info */}
-          <div className="space-y-6">
+            <div className="space-y-6">
             <div>
               <label className="text-xs text-zinc-500 uppercase font-bold tracking-wider block mb-2">Meeting Name</label>
               <input 
@@ -167,7 +166,6 @@ export default function CreateMeetingPage() {
             </div>
           </div>
 
-          {/* Right Column: Time Slots */}
           <div>
             <label className="text-xs text-zinc-500 uppercase font-bold tracking-wider block mb-4">Availability (9 AM - 6 PM)</label>
             <div className="grid grid-cols-1 gap-2">

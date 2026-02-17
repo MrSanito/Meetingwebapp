@@ -13,6 +13,10 @@ interface Slot {
     startTime: string;
     endTime: string;
     bookedById: string | null;
+    bookedBy?: {
+        name: string;
+        email: string;
+    };
 }
 
 interface Meeting {
@@ -28,12 +32,15 @@ export default function MeetingPage() {
     const params = useParams();
     const meetingId = Array.isArray(params.id) ? params.id[0] : params.id;
     
-    const { name, username, email } = useName(); // This name is the Booker's name
+    const { name, username, email } = useName();
     
     const [meeting, setMeeting] = useState<Meeting | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
     const [booking, setBooking] = useState(false);
+
+    const alreadyBookedSlot = meeting?.slots.find(slot => slot.bookedBy?.email === email);
+    const isAlreadyBooked = !!alreadyBookedSlot;
 
     useEffect(() => {
         if (!meetingId) return;
@@ -75,7 +82,6 @@ export default function MeetingPage() {
             
             if (res.data.success) {
                 toast.success("Booking Confirmed! Check your email.");
-                // Refresh data to show booked slot
                 window.location.reload();
             } else {
                 toast.error("Booking Failed: " + res.data.message);
@@ -121,6 +127,19 @@ export default function MeetingPage() {
 
             <p className="text-sm text-zinc-400">Book as: <span className="text-white font-medium">{name}</span> {email && <span className="text-zinc-500 text-xs">({email})</span>}</p>
             
+            {isAlreadyBooked && (
+                <div className="bg-yellow-500/10 border border-yellow-500/50 p-3 rounded-lg text-yellow-500 text-sm text-center">
+                    You have already booked a slot: <br/> 
+                    <span className="font-bold">{formatTime(alreadyBookedSlot!.startTime)} - {formatTime(alreadyBookedSlot!.endTime)}</span>
+                </div>
+            )}
+
+            {meeting.createdBy?.email === email && (
+                 <div className="bg-red-500/10 border border-red-500/50 p-3 rounded-lg text-red-500 text-sm text-center">
+                    You cannot book your own meeting.
+                </div>
+            )}
+            
             <div className="space-y-2">
                 <label className="text-xs text-zinc-500 block">Select a Time Slot</label>
                 <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
@@ -150,9 +169,9 @@ export default function MeetingPage() {
 
             <button 
                 onClick={handleBook}
-                disabled={booking || !selectedSlotId}
+                disabled={booking || !selectedSlotId || isAlreadyBooked || meeting.createdBy?.email === email}
                 className={`w-full py-2 rounded-lg transition font-medium mt-2 ${
-                    booking || !selectedSlotId 
+                    booking || !selectedSlotId || isAlreadyBooked 
                     ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}

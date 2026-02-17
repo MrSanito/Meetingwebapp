@@ -7,7 +7,7 @@ interface CreateMeetingBody {
     selectedDate: string;
     selectedSlots: string[];
     creatorName: string;
-    creatorUsername: string; // Ensure frontend sends this
+    creatorUsername: string;
     meetingId: string;
 }
 
@@ -60,7 +60,7 @@ export const createMeetingController = async (req: Request, res: Response): Prom
             user = await prisma.user.create({
                 data: {
                     username: creatorUsername,
-                    name: creatorName || creatorUsername // Fallback
+                    name: creatorName || creatorUsername
                 }
             });
         }
@@ -123,7 +123,7 @@ export const getMeeting = async (req: Request, res: Response): Promise<void> => 
 
 import { sendEmail } from "../mailer";
 
-// ... previous imports
+
 
 export const bookSlot = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -159,28 +159,44 @@ export const bookSlot = async (req: Request, res: Response): Promise<void> => {
                 }
             } 
         });
+        
+        console.log(`[BOOKING SLOT] Slot found: ${slot ? slot.id : 'NOT FOUND'}, BookedBy: ${slot?.bookedById}`);
 
         if (!slot) {
              res.status(404).json({ success: false, message: "Slot not found" });
              return;
         }
-        if (slot.bookedById) {
-            res.status(409).json({ success: false, message: "Slot already booked" });
+
+        const existingBooking = await prisma.timeSlot.findFirst({
+            where: {
+                meetingId: slot.meetingId,
+                bookedById: user.id
+            }
+        });
+
+        if (existingBooking) {
+            res.status(400).json({ success: false, message: "You have already booked a slot for this meeting." });
             return;
         }
-
-        await prisma.timeSlot.update({
-            where: { id: slotId },
+        const updateResult = await prisma.timeSlot.updateMany({
+            where: { 
+                id: slotId,
+                bookedById: null 
+            },
             data: {
                 bookedById: user.id,
                 bookedAt: new Date()
             }
         });
 
+        if (updateResult.count === 0) {
+             res.status(409).json({ success: false, message: "Slot already booked" });
+             return;
+        }
+
         const meetingDate = slot.meeting.date.toISOString().split('T')[0];
         const timeRange = `${slot.startTime.toLocaleTimeString()} - ${slot.endTime.toLocaleTimeString()}`;
         
-        // Send emails asynchronously - do not block response if email fails
         try {
             await sendEmail(
                 bookerEmail, 
@@ -197,7 +213,6 @@ export const bookSlot = async (req: Request, res: Response): Promise<void> => {
             }
         } catch (emailError) {
             console.error("[BOOKING WARNING] Booking successful but email failed:", emailError);
-            // Swallowing error to ensure client gets success response
         }
 
         res.status(200).json({ success: true, message: "Slot booked successfully" });

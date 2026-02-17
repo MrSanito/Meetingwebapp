@@ -17,7 +17,7 @@ export const sendEmail = async (to: string, subject: string, text: string) => {
 
         const msg = {
             to,
-            from: '1988krishnani@gmail.com', // Verified sender required by SendGrid
+            from: '1988krishnani@gmail.com',
             subject,
             text,
         };

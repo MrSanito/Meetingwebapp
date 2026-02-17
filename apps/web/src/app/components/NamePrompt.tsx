@@ -19,7 +19,6 @@ export default function NamePrompt() {
       return;
     }
     
-    // Email is required
     if (!tempEmail || !tempEmail.includes("@")) {
         alert("Please enter a valid email address");
         return;

@@ -1,4 +1,4 @@
-// Prisma Schema for Meeting Booking System
+
 
 generator client {
   provider = "prisma-client-js"
@@ -20,9 +20,8 @@ model User {
   name      String
   username  String   @unique
   email     String?  @unique
-  createdAt DateTime @default(now())   // Fix: Add email
+  createdAt DateTime @default(now())
   
-  // Relations
   createdMeetings Meeting[] @relation("CreatorMeetings")
   bookedSlots     TimeSlot[]
 }
@@ -37,11 +36,9 @@ model Meeting {
 
   createdAt DateTime @default(now())
 
-  // Creator relation
   createdById String
   createdBy   User @relation("CreatorMeetings", fields: [createdById], references: [id])
 
-  // All availability slots
   slots TimeSlot[]
 }
 
@@ -53,7 +50,6 @@ model TimeSlot {
   meetingId String
   meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
-  // Who booked this slot (if any)
   bookedById String?
   bookedBy   User?   @relation(fields: [bookedById], references: [id])
 
