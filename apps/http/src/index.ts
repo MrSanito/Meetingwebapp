@@ -1,5 +1,5 @@
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { prisma } from './client';
 import router from './routes/index';
@@ -12,7 +12,7 @@ app.use(express.json());
 
 app.use("/api/v1", router);
 
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.send('Hello from Express!');
 });
 
