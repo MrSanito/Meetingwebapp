@@ -67,7 +67,7 @@ export default function ProfilePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 pb-8 border-b border-zinc-800">
                     <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">{profile.name}</h1>
+                        <h1 className="text-3xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">{profile.name}</h1>
                         <p className="text-zinc-500 font-mono">@{profile.username}</p>
                         {profile.email && <p className="text-zinc-600 text-sm">{profile.email}</p>}
                     </div>

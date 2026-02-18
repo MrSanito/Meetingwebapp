@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import { NameProvider } from "./context/NameContext";
+import Navbar from "./components/Navbar";
 
 export default function RootLayout({
   children,
@@ -29,9 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black min-h-screen pt-16`}
       >
         <NameProvider>
+            <Navbar />
             {children}
             <ToastContainer />
         </NameProvider>

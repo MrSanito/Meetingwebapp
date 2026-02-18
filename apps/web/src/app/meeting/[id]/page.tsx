@@ -160,7 +160,11 @@ export default function MeetingPage() {
                                 }`}
                             >
                                 {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                                {isBooked && " (Booked)"}
+                                {isBooked && (
+                                    <span className="block text-[10px] mt-1 opacity-80 italic">
+                                        Slot already booked. Contact {meeting.createdBy?.name} {meeting.createdBy?.email ? `(${meeting.createdBy.email})` : ''} for details.
+                                    </span>
+                                )}
                             </button>
                         );
                     })}
