@@ -23,7 +23,7 @@ export default function CreateMeetingPage() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   
   const [isSuccess, setIsSuccess] = useState(false);
-
+  const [busySlots, setBusySlots] = useState<{ startTime: string, endTime: string, reason: string }[]>([]);
 
   useEffect(() => {
     if (!name) return; 
@@ -35,13 +35,78 @@ export default function CreateMeetingPage() {
     setMeetingId(newId);
   }, [name, meetingId]);
 
+  useEffect(() => {
+    if (!username || !selectedDate) return;
+
+    const dateObj = selectedDate instanceof Date ? selectedDate : Array.isArray(selectedDate) ? selectedDate[0] : null;
+
+    if (!dateObj) return;
+
+    const offset = dateObj.getTimezoneOffset();
+    const dateLocal = new Date(dateObj.getTime() - (offset * 60 * 1000));
+    const dateStr = dateLocal.toISOString().split('T')[0];
+
+    const fetchAvailability = async () => {
+        try {
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/user/availability/${username}?date=${dateStr}`);
+            if (res.data.success) {
+                setBusySlots(res.data.busySlots);
+            }
+        } catch (error) {
+            console.error("Failed to check availability", error);
+        }
+    };
+
+    fetchAvailability();
+  }, [username, selectedDate]);
+
   const timeSlots = [
     "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
     "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM",
     "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM"
   ];
 
+  const isSlotBusy = (slotDef: string) => {
+      if (!busySlots.length) return false;
+      const [startStr, endStr] = slotDef.split(" - ");
+        
+      const parseToDate = (timeStr: string) => {
+           const dateObj = selectedDate instanceof Date ? selectedDate : Array.isArray(selectedDate) ? selectedDate[0] : new Date();
+           if (!dateObj) return null;
+           
+           const parts = timeStr.split(" "); 
+           const time = parts[0]; 
+           const period = parts[1];
+           const [h, m] = time.split(":").map(Number);
+           
+           let hours = h;
+           if (period === "PM" && hours !== 12) hours += 12;
+           if (period === "AM" && hours === 12) hours = 0;
+
+           const d = new Date(dateObj);
+           d.setHours(hours, m, 0, 0);
+           return d;
+      };
+
+      const slotStart = parseToDate(startStr);
+      const slotEnd = parseToDate(endStr);
+      
+      if (!slotStart || !slotEnd) return false;
+
+      return busySlots.some(busy => {
+          const busyStart = new Date(busy.startTime);
+          const busyEnd = new Date(busy.endTime);
+          
+          return (slotStart < busyEnd && slotEnd > busyStart);
+      });
+  };
+
   const toggleSlot = (slot: string) => {
+    if (isSlotBusy(slot)) {
+        toast.error("You are already busy at this time!");
+        return;
+    }
+
     setSelectedSlots(prev => {
       const isSelected = prev.includes(slot);
       const next = isSelected ? prev.filter(s => s !== slot) : [...prev, slot];
@@ -80,7 +145,8 @@ export default function CreateMeetingPage() {
       selectedDate: dateStr,
       selectedSlots,
       creatorName: name,
-      creatorUsername: localStorage.getItem("username") || name 
+      creatorUsername: localStorage.getItem("username") || name,
+      timezoneOffset: new Date().getTimezoneOffset() 
     };
     
     console.log("Creating meeting with data:", data);
@@ -154,6 +220,7 @@ export default function CreateMeetingPage() {
                     <Calendar 
                         onChange={setSelectedDate} 
                         value={selectedDate}
+                        minDate={new Date()}
                         className="react-calendar" 
                         tileClassName={({ date, view }) => {
                             if (view === 'month') {
@@ -169,22 +236,30 @@ export default function CreateMeetingPage() {
           <div>
             <label className="text-xs text-zinc-500 uppercase font-bold tracking-wider block mb-4">Availability (9 AM - 6 PM)</label>
             <div className="grid grid-cols-1 gap-2">
-              {timeSlots.map(slot => (
-                <button
-                  key={slot}
-                  onClick={() => toggleSlot(slot)}
-                  className={`text-left px-4 py-3 rounded-lg border transition-all duration-200 text-sm flex justify-between items-center ${
-                    selectedSlots.includes(slot) 
-                    ? "bg-green-600 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.2)]" 
-                    : "bg-black border-zinc-800 text-zinc-400 hover:border-zinc-700"
-                  }`}
-                >
-                  {slot}
-                  {selectedSlots.includes(slot) && (
-                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white uppercase italic">Selected</span>
-                  )}
-                </button>
-              ))}
+              {timeSlots.map(slot => {
+                  const busy = isSlotBusy(slot);
+                  return (
+                    <button
+                    key={slot}
+                    onClick={() => toggleSlot(slot)}
+                    disabled={busy}
+                    className={`text-left px-4 py-3 rounded-lg border transition-all duration-200 text-sm flex justify-between items-center ${
+                        busy 
+                        ? "bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed opacity-50"
+                        : selectedSlots.includes(slot) 
+                            ? "bg-green-600 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.2)]" 
+                            : "bg-black border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                    >
+                    {slot}
+                    {busy ? (
+                        <span className="text-[10px] bg-red-900/30 text-red-500 px-1.5 py-0.5 rounded uppercase font-bold">Busy</span>
+                    ) : selectedSlots.includes(slot) && (
+                        <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white uppercase italic">Selected</span>
+                    )}
+                    </button>
+                  );
+              })}
             </div>
           </div>
         </div>

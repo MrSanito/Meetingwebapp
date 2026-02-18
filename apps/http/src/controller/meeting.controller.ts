@@ -9,9 +9,10 @@ interface CreateMeetingBody {
     creatorName: string;
     creatorUsername: string;
     meetingId: string;
+    timezoneOffset: number;
 }
 
-const parseTimeSlot = (date: string, timeRange: string) => {
+const parseTimeSlot = (date: string, timeRange: string, timezoneOffset: number) => {
     const [startStr, endStr] = timeRange.split(" - ");
     
     if (!startStr || !endStr) {
@@ -37,7 +38,20 @@ const parseTimeSlot = (date: string, timeRange: string) => {
         if (period === "PM" && hours !== 12) hours += 12;
         if (period === "AM" && hours === 12) hours = 0;
         
-        return new Date(`${date}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
+        // Construct date string for the selected day and time
+        // Example: "2023-10-27T10:00:00"
+        const localDateStr = `${date}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+        
+        // Create a Date object assuming this string is in UTC (for calculation base)
+        const utcBase = new Date(localDateStr + "Z");
+        
+        // timezoneOffset is in minutes (e.g. -330 for IST). 
+        // If client is IST (UTC+5:30), they sent "10:00". 
+        // "10:00" in IST is "04:30" in UTC.
+        // UTC Base ("10:00") + Offset (-330min) = 10:00 - 5.5h = 04:30.
+        // So we ADD the offset (which is negative for East, positive for West in JS getTimezoneOffset)
+        
+        return new Date(utcBase.getTime() + (timezoneOffset * 60 * 1000));
     };
 
     return {
@@ -48,7 +62,7 @@ const parseTimeSlot = (date: string, timeRange: string) => {
 
 export const createMeetingController = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { meetingName, meetingDetails, selectedDate, selectedSlots, creatorName, creatorUsername, meetingId } = req.body as CreateMeetingBody;
+        const { meetingName, meetingDetails, selectedDate, selectedSlots, creatorName, creatorUsername, meetingId, timezoneOffset } = req.body as CreateMeetingBody;
 
         if (!meetingName || !selectedDate || !selectedSlots || selectedSlots.length === 0 || !creatorUsername) {
             res.status(400).json({ success: false, message: "Missing required fields" });
@@ -75,7 +89,7 @@ export const createMeetingController = async (req: Request, res: Response): Prom
                 createdById: user.id,
                 slots: {
                     create: selectedSlots.map(slot => {
-                        const { startTime, endTime } = parseTimeSlot(selectedDate, slot);
+                        const { startTime, endTime } = parseTimeSlot(selectedDate, slot, timezoneOffset || 0);
                         return { startTime, endTime };
                     })
                 }
