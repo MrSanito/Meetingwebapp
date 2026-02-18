@@ -161,8 +161,11 @@ export default function MeetingPage() {
                             >
                                 {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                                 {isBooked && (
-                                    <span className="block text-[10px] mt-1 opacity-80 italic">
-                                        Slot already booked. Contact {meeting.createdBy?.name} {meeting.createdBy?.email ? `(${meeting.createdBy.email})` : ''} for details.
+                                    <span className="block text-[10px] mt-1 opacity-80 italic font-medium">
+                                        {slot.bookedBy?.email === email 
+                                            ? "Your slot is booked. Thank you!" 
+                                            : `Slot already booked. Contact ${meeting.createdBy?.name} ${meeting.createdBy?.email ? `(${meeting.createdBy.email})` : ''} for details.`
+                                        }
                                     </span>
                                 )}
                             </button>
