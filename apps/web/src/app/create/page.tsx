@@ -23,6 +23,7 @@ export default function CreateMeetingPage() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   
   const [isSuccess, setIsSuccess] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [busySlots, setBusySlots] = useState<{ startTime: string, endTime: string, reason: string }[]>([]);
 
   useEffect(() => {
@@ -151,6 +152,7 @@ export default function CreateMeetingPage() {
     
     console.log("Creating meeting with data:", data);
 
+    setCreating(true);
     try {
         const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/meeting/create`, data);
 
@@ -168,6 +170,8 @@ export default function CreateMeetingPage() {
         } else {
              toast.error("Failed to connect to server");
         }
+    } finally {
+        setCreating(false);
     }
   };
 
@@ -267,9 +271,12 @@ export default function CreateMeetingPage() {
         <div className="mt-10 flex flex-col gap-4">
           <button 
             onClick={handleCreate}
-            className="w-full bg-green-600 text-white py-4 rounded-xl hover:bg-green-500 transition font-bold text-lg active:scale-95 shadow-lg shadow-green-900/20"
+            disabled={creating}
+            className={`w-full text-white py-4 rounded-xl transition font-bold text-lg active:scale-95 shadow-lg shadow-green-900/20 ${
+                creating ? "bg-zinc-700 cursor-not-allowed" : "bg-green-600 hover:bg-green-500"
+            }`}
           >
-            Create Meeting & Generate Link
+            {creating ? "Creating Meeting..." : "Create Meeting & Generate Link"}
           </button>
           <div className="text-center mt-4">
             <Link href="/" className="text-zinc-500 hover:text-white text-center text-sm underline underline-offset-4">

@@ -65,6 +65,7 @@ export default function MeetingPage() {
     }, [meetingId]);
 
     const handleBook = async () => {
+        if (booking) return;
         if (!selectedSlotId || !name) {
             toast.error("Please select a slot and ensure you have a name set.");
             return;
